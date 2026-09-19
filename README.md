@@ -25,6 +25,14 @@ A tiny, no-build website for learning essays by heart, monkeytype-style.
 - The end screen reports wpm, first-time accuracy, and how many words were
   autocorrected or rejected.
 
+## Managing decks and cards
+
+- **Rename** turns the deck row into a text box: edit, then **Save** (or press Enter);
+  **Cancel** or Escape backs out.
+- **Delete** asks first: the button changes to **Sure?** and only the second click
+  deletes. It disarms itself after four seconds. Same for cards.
+- The app never uses browser pop-ups, so nothing breaks in viewers that block them.
+
 ## Saving your essays
 
 Decks are stored in your browser's `localStorage`, so they stay there between

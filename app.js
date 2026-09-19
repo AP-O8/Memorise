@@ -28,7 +28,7 @@
     try {
       localStorage.setItem(KEY, JSON.stringify(data));
     } catch (e) {
-      alert('Could not save to this browser: ' + e.message);
+      toast('Could not save to this browser: ' + e.message, true);
     }
   }
 
@@ -54,6 +54,37 @@
     return e;
   }
 
+  // small status message; alert() is blocked in some embedded viewers
+  var toastTimer = null;
+  function toast(msg, isError) {
+    var box = $('#toast');
+    box.textContent = msg;
+    box.className = isError ? 'error' : '';
+    box.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { box.hidden = true; }, 3500);
+  }
+
+  // click once to arm, click again to confirm; confirm() is blocked in some viewers
+  function armDelete(btn, onConfirm) {
+    if (btn.dataset.armed === '1') { onConfirm(); return; }
+    var label = btn.textContent;
+    btn.dataset.armed = '1';
+    btn.textContent = 'Sure?';
+    btn.classList.add('armed');
+    setTimeout(function () {
+      if (!btn.isConnected) return;
+      btn.dataset.armed = '';
+      btn.textContent = label;
+      btn.classList.remove('armed');
+    }, 4000);
+  }
+
+  // some environments report the return key as "Return" rather than "Enter"
+  function isEnter(e) {
+    return e.key === 'Enter' || e.key === 'Return' || e.keyCode === 13;
+  }
+
   function show(view) {
     $('#view-decks').hidden = view !== 'decks';
     $('#view-deck').hidden = view !== 'deck';
@@ -66,6 +97,7 @@
 
   var currentDeckId = null;
   var editingCardId = null;
+  var renamingDeckId = null;
 
   function renderDecks() {
     var list = $('#deck-list');
@@ -74,6 +106,37 @@
 
     data.decks.forEach(function (deck) {
       var li = el('li');
+
+      if (renamingDeckId === deck.id) {
+        var field = el('input', 'name');
+        field.type = 'text';
+        field.value = deck.name;
+
+        var ok = el('button', 'small', 'Save');
+        var cancel = el('button', 'small ghost', 'Cancel');
+
+        var commit = function () {
+          var n = field.value.trim();
+          if (!n) { field.focus(); return; }
+          deck.name = n;
+          renamingDeckId = null;
+          save();
+          renderDecks();
+        };
+        ok.onclick = commit;
+        cancel.onclick = function () { renamingDeckId = null; renderDecks(); };
+        field.onkeydown = function (e) {
+          if (isEnter(e)) { e.preventDefault(); commit(); }
+          if (e.key === 'Escape' || e.key === 'Esc') { renamingDeckId = null; renderDecks(); }
+        };
+
+        li.append(field, ok, cancel);
+        list.appendChild(li);
+        field.focus();
+        field.select();
+        return;
+      }
+
       var name = el('span', 'name', deck.name);
       var meta = el('span', 'meta', deck.cards.length + (deck.cards.length === 1 ? ' card' : ' cards'));
 
@@ -81,17 +144,16 @@
       open.onclick = function () { openDeck(deck.id); };
 
       var rename = el('button', 'small ghost', 'Rename');
-      rename.onclick = function () {
-        var n = prompt('Deck name:', deck.name);
-        if (n && n.trim()) { deck.name = n.trim(); save(); renderDecks(); }
-      };
+      rename.onclick = function () { renamingDeckId = deck.id; renderDecks(); };
 
       var del = el('button', 'small ghost danger', 'Delete');
       del.onclick = function () {
-        if (confirm('Delete deck "' + deck.name + '" and all its cards?')) {
+        armDelete(del, function () {
           data.decks = data.decks.filter(function (d) { return d.id !== deck.id; });
-          save(); renderDecks();
-        }
+          save();
+          renderDecks();
+          toast('Deleted deck "' + deck.name + '"');
+        });
       };
 
       li.append(name, meta, open, rename, del);
@@ -116,6 +178,7 @@
 
   function openDeck(id) {
     currentDeckId = id;
+    renamingDeckId = null;
     resetCardForm();
     renderDeck();
     show('deck');
@@ -151,11 +214,13 @@
 
       var del = el('button', 'small ghost danger', 'Delete');
       del.onclick = function () {
-        if (confirm('Delete card "' + card.title + '"?')) {
+        armDelete(del, function () {
           deck.cards.splice(index, 1);
           if (editingCardId === card.id) resetCardForm();
-          save(); renderDeck();
-        }
+          save();
+          renderDeck();
+          toast('Deleted card "' + card.title + '"');
+        });
       };
 
       li.append(name, meta, start, edit, up, down, del);
@@ -217,8 +282,8 @@
   });
 
   $('#card-cancel').onclick = resetCardForm;
-  $('#back-to-decks').onclick = function () { renderDecks(); show('decks'); };
-  $('#home-link').onclick = function () { renderDecks(); show('decks'); };
+  $('#back-to-decks').onclick = function () { renamingDeckId = null; renderDecks(); show('decks'); };
+  $('#home-link').onclick = function () { renamingDeckId = null; renderDecks(); show('decks'); };
 
   $('#btn-type-all').onclick = function () {
     var deck = deckById(currentDeckId);
@@ -557,7 +622,7 @@
     var t = e.target;
     if (t !== capture && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
     if (e.key === 'Backspace') { e.preventDefault(); backspace(); return; }
-    if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); submitWord(); return; }
+    if (isEnter(e) || e.key === 'Tab') { e.preventDefault(); submitWord(); return; }
     if (e.key && e.key.length === 1) { e.preventDefault(); typeChar(e.key); }
   });
 
@@ -633,7 +698,6 @@
       try {
         var parsed = JSON.parse(reader.result);
         if (!parsed || !Array.isArray(parsed.decks)) throw new Error('Not a Memorise backup file');
-        if (!confirm('Add ' + parsed.decks.length + ' deck(s) from this file to your current decks?')) return;
         parsed.decks.forEach(function (d) {
           data.decks.push({
             id: uid(),
@@ -646,8 +710,9 @@
         save();
         renderDecks();
         show('decks');
+        toast('Added ' + parsed.decks.length + ' deck(s) from the backup');
       } catch (err) {
-        alert('Could not import that file: ' + err.message);
+        toast('Could not import that file: ' + err.message, true);
       }
       e.target.value = '';
     };
