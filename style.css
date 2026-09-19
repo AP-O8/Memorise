@@ -1,0 +1,136 @@
+:root {
+  --bg: #1c1e20;
+  --fg: #d8d8d0;
+  --dim: #6b6f73;
+  --accent: #e2b714;
+  --err: #ca4754;
+  --panel: #26292c;
+  --line: #3a3e42;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 0 16px 64px;
+  background: var(--bg);
+  color: var(--fg);
+  font: 16px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  max-width: 900px;
+  margin-inline: auto;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+header h1 { font-size: 20px; margin: 0; color: var(--accent); cursor: pointer; }
+.spacer { flex: 1; }
+
+h2 { font-size: 18px; }
+h3 { font-size: 15px; }
+
+button, .btn-like {
+  font: inherit;
+  background: var(--panel);
+  color: var(--fg);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+button:hover, .btn-like:hover { border-color: var(--accent); color: var(--accent); }
+button.small, .btn-like.small, .small { font-size: 13px; padding: 6px 10px; }
+button.ghost { background: transparent; }
+button.link {
+  background: none; border: none; color: var(--dim); padding: 0; margin-bottom: 8px;
+}
+button.link:hover { color: var(--accent); }
+button.danger:hover { border-color: var(--err); color: var(--err); }
+
+input[type=text], textarea {
+  font: inherit;
+  background: var(--panel);
+  color: var(--fg);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px 10px;
+  width: 100%;
+}
+textarea { resize: vertical; margin-bottom: 8px; }
+input:focus, textarea:focus { outline: none; border-color: var(--accent); }
+
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+.row input[type=text] { flex: 1; min-width: 200px; }
+.hint { color: var(--dim); font-size: 13px; }
+
+.list { list-style: none; padding: 0; margin: 0 0 24px; }
+.list li {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+.list .name { flex: 1; min-width: 160px; }
+.list .meta { color: var(--dim); font-size: 12px; }
+
+.options label { font-size: 13px; color: var(--dim); }
+.stats { display: flex; gap: 20px; color: var(--accent); font-size: 14px; margin-bottom: 6px; }
+.bar { height: 4px; background: var(--panel); border-radius: 2px; overflow: hidden; margin-bottom: 20px; }
+#bar-fill { height: 100%; width: 0; background: var(--accent); transition: width .1s linear; }
+
+/* ---- the typing text ---- */
+.text {
+  font-size: 22px;
+  line-height: 1.9;
+  letter-spacing: .3px;
+  outline: none;
+  cursor: text;
+  padding-bottom: 8px;
+}
+.word { display: inline-block; }
+.ch { position: relative; white-space: pre; color: var(--fg); }
+.ch.blank { color: var(--dim); }
+.ch.ok { color: var(--fg); }
+.ch.bad { color: var(--err); background: rgba(202,71,84,.22); border-radius: 2px; }
+
+/* memory mode: letters you have not earned yet are blanks */
+.text.hide .ch.blank { color: transparent; border-bottom: 1px solid var(--line); }
+
+/* a word that was accepted as a near-miss */
+.word.fixed .ch { color: var(--accent); }
+/* a word that was too far off to accept */
+.word.rejected .ch { color: var(--err); }
+
+.ch.current::before {
+  content: "";
+  position: absolute;
+  left: -1px; top: 4%; bottom: 4%;
+  width: 2px;
+  background: var(--accent);
+  animation: blink 1s steps(1) infinite;
+}
+.caret {
+  display: inline-block;
+  width: 2px; height: 1em;
+  background: var(--accent);
+  vertical-align: -.15em;
+  animation: blink 1s steps(1) infinite;
+}
+@keyframes blink { 50% { opacity: 0; } }
+
+#capture { position: fixed; top: -100px; left: -100px; opacity: 0; width: 1px; height: 1px; }
+
+#results {
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  padding: 12px 16px;
+  margin-top: 16px;
+}

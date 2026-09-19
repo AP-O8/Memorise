@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Memorise</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <h1 id="home-link">Memorise</h1>
+  <div class="spacer"></div>
+  <button id="btn-export" class="small">Export backup</button>
+  <label class="small btn-like" for="file-import">Import backup</label>
+  <input type="file" id="file-import" accept="application/json" hidden>
+</header>
+
+<!-- ============ DECK LIST ============ -->
+<section id="view-decks">
+  <h2>Decks</h2>
+  <p class="hint">A deck = one essay. The cards inside it = the paragraphs.</p>
+
+  <form id="form-deck" class="row">
+    <input id="deck-name" type="text" placeholder="New deck name (e.g. Macbeth essay)" required>
+    <button type="submit">Add deck</button>
+  </form>
+
+  <ul id="deck-list" class="list"></ul>
+  <p id="decks-empty" class="hint" hidden>No decks yet. Add one above.</p>
+</section>
+
+<!-- ============ ONE DECK ============ -->
+<section id="view-deck" hidden>
+  <button class="link" id="back-to-decks">&larr; All decks</button>
+  <h2 id="deck-title"></h2>
+
+  <div class="row">
+    <button id="btn-type-all">Type the whole essay (all cards in order)</button>
+  </div>
+
+  <ul id="card-list" class="list"></ul>
+  <p id="cards-empty" class="hint" hidden>No cards yet. Add a paragraph below.</p>
+
+  <h3 id="editor-heading">Add a card</h3>
+  <form id="form-card">
+    <input id="card-title" type="text" placeholder="Card title (e.g. Paragraph 1 - context)" required>
+    <textarea id="card-text" rows="8" placeholder="Paste the paragraph you want to memorise..." required></textarea>
+    <div class="row">
+      <button type="submit" id="card-submit">Add card</button>
+      <button type="button" id="card-cancel" class="ghost" hidden>Cancel edit</button>
+    </div>
+  </form>
+</section>
+
+<!-- ============ TYPING ============ -->
+<section id="view-type" hidden>
+  <button class="link" id="back-to-deck">&larr; Back</button>
+  <h2 id="type-title"></h2>
+
+  <div class="row options">
+    <label><input type="checkbox" id="opt-hide" checked> Hide the text (memory mode)</label>
+    <label><input type="checkbox" id="opt-fuzzy" checked> Accept near-misses (autocorrect)</label>
+    <button id="btn-peek" class="ghost small" type="button">Peek</button>
+    <button id="btn-restart" class="ghost small" type="button">Restart</button>
+  </div>
+
+  <div class="stats">
+    <span id="stat-progress">0 / 0</span>
+    <span id="stat-wpm">0 wpm</span>
+    <span id="stat-acc">100%</span>
+    <span id="stat-time">0:00</span>
+  </div>
+  <div class="bar"><div id="bar-fill"></div></div>
+
+  <div id="text" class="text" tabindex="0"></div>
+  <input id="capture" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+
+  <p class="hint">
+    Just type the words &mdash; capitals and punctuation (full stops, commas, apostrophes,
+    speech marks) are ignored, so you never have to type them. A word appears once you have
+    it right; press <b>space</b> to submit a word you are unsure of. With autocorrect on, a
+    near-miss spelling is accepted and shown in yellow. <b>Backspace</b> steps back.
+  </p>
+
+  <div id="results" hidden>
+    <h3>Done.</h3>
+    <p id="results-text"></p>
+    <button id="btn-again">Type it again</button>
+  </div>
+</section>
+
+<script src="app.js"></script>
+</body>
+</html>
