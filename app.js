@@ -308,7 +308,9 @@
     start: null,
     timer: null,
     running: false,
-    total: 0      // number of words that actually have to be typed
+    total: 0,     // number of words that actually have to be typed
+    open: {},     // words revealed by peeking, cleared on restart
+    marked: {}    // words you peeked at, kept so you can see what to work on
   };
 
   function normalize(s) {
@@ -383,6 +385,7 @@
   /* ---- start / reset ---- */
 
   function startTyping(title, rawText) {
+    T.marked = {};
     T.tokens = tokenize(rawText);
     T.total = T.tokens.filter(function (t) { return t.core.length > 0; }).length;
     $('#type-title').textContent = title;
@@ -397,6 +400,7 @@
     wrap.innerHTML = '';
     T.els = T.tokens.map(function (tok, i) {
       var span = el('span', 'word');
+      span.dataset.i = i;
       wrap.appendChild(span);
       if (i < T.tokens.length - 1) wrap.appendChild(document.createTextNode(' '));
       return span;
@@ -412,6 +416,7 @@
     T.wrong = 0;
     T.start = null;
     T.running = true;
+    T.open = {};
     stopTimer();
 
     skipUntypable();
@@ -441,7 +446,8 @@
   function renderWord(i) {
     var tok = T.tokens[i], host = T.els[i], state = T.state[i];
     if (!host) return;
-    host.className = 'word ' + state;
+    var hidden = T.open[i] ? 'ch show' : 'ch blank';
+    host.className = 'word ' + state + (T.marked[i] ? ' peeked' : '');
     host.innerHTML = '';
 
     if (state === 'done' || state === 'fixed') {
@@ -449,7 +455,7 @@
       return;
     }
     if (state === 'pending') {
-      appendChars(host, tok.display, 'ch blank');
+      appendChars(host, tok.display, hidden);
       return;
     }
 
@@ -462,7 +468,7 @@
     var rest = tok.core.slice(T.buf.length);
     if (rest.length) {
       Array.from(rest).forEach(function (ch, k) {
-        host.appendChild(el('span', 'ch blank' + (k === 0 ? ' current' : ''), ch));
+        host.appendChild(el('span', hidden + (k === 0 ? ' current' : ''), ch));
       });
     } else {
       host.appendChild(el('span', 'caret'));
@@ -551,6 +557,24 @@
     updateStats();
   }
 
+  // peek at one word: it becomes readable and stays highlighted afterwards
+  function peekWord(i) {
+    if (i == null || i < 0 || i >= T.tokens.length) return;
+    if (!T.tokens[i].core) return; // punctuation is never hidden
+    if (T.open[i]) {
+      delete T.open[i];
+      delete T.marked[i];
+    } else {
+      T.open[i] = true;
+      T.marked[i] = true;
+    }
+    renderWord(i);
+  }
+
+  function markedCount() {
+    return Object.keys(T.marked).length;
+  }
+
   function scrollIntoView(i) {
     var host = T.els[i];
     if (!host) return;
@@ -566,7 +590,8 @@
     var seconds = T.start ? (Date.now() - T.start) / 1000 : 0;
     $('#results-text').textContent =
       wpm() + ' wpm  ·  ' + accuracy() + '% first-time accuracy  ·  ' +
-      T.fixed + ' autocorrected  ·  ' + T.wrong + ' rejected  ·  ' + fmtTime(seconds);
+      T.fixed + ' autocorrected  ·  ' + T.wrong + ' rejected  ·  ' +
+      markedCount() + ' peeked  ·  ' + fmtTime(seconds);
     $('#results').hidden = false;
   }
 
@@ -638,6 +663,8 @@
     if ($('#view-type').hidden) return;
     if (e.target.closest('button, input, label, a')) return;
     e.preventDefault();
+    var word = e.target.closest('.word');
+    if (word && word.dataset.i != null) peekWord(Number(word.dataset.i));
     focusCapture();
   });
 
@@ -663,6 +690,11 @@
   };
 
   $('#btn-peek').onclick = function () {
+    if (T.i < T.tokens.length) peekWord(T.i);
+    focusCapture();
+  };
+
+  $('#btn-reveal').onclick = function () {
     $('#text').classList.toggle('hide');
     focusCapture();
   };

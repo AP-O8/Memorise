@@ -20,6 +20,11 @@ A tiny, no-build website for learning essays by heart, monkeytype-style.
   Being one letter off a *different* real word (`farce` for `force`) is accepted too —
   that is the price of autocorrect. Turn it off with *Accept near-misses* for strict spelling.
 - Anything further off is rejected: the word flashes red and you stay on it.
+- **Peeking**: *Peek word* uncovers the word you are stuck on, and clicking any word
+  uncovers that one. A peeked word stays highlighted for the rest of the card — including
+  after a **Restart**, when it is hidden again — so you can see which bits need work.
+  Click it again to drop the highlight. *Reveal all* still shows the whole text.
+  Peek marks are cleared when you start a different card.
 - **Backspace** deletes a letter, and steps back to the previous word when the current
   one is empty.
 - The end screen reports wpm, first-time accuracy, and how many words were
@@ -64,4 +69,5 @@ The site is plain HTML/CSS/JS with no build step, so it works as-is.
 ## Keys
 
 - Type normally; **space** submits a word; **Backspace** steps back.
-- **Peek** reveals the full text; **Restart** starts the card over.
+- **Peek word** / clicking a word uncovers and highlights it; **Reveal all** shows
+  everything; **Restart** starts the card over.

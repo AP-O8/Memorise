@@ -61,7 +61,8 @@
   <div class="row options">
     <label><input type="checkbox" id="opt-hide" checked> Hide the text (memory mode)</label>
     <label><input type="checkbox" id="opt-fuzzy" checked> Accept near-misses (autocorrect)</label>
-    <button id="btn-peek" class="ghost small" type="button">Peek</button>
+    <button id="btn-peek" class="ghost small" type="button">Peek word</button>
+    <button id="btn-reveal" class="ghost small" type="button">Reveal all</button>
     <button id="btn-restart" class="ghost small" type="button">Restart</button>
   </div>
 
@@ -81,6 +82,12 @@
     speech marks) are ignored, so you never have to type them. A word appears once you have
     it right; press <b>space</b> to submit a word you are unsure of. With autocorrect on, a
     near-miss spelling is accepted and shown in yellow. <b>Backspace</b> steps back.
+  </p>
+  <p class="hint">
+    Stuck? <b>Peek word</b> uncovers the word you are on, and clicking any word uncovers
+    that one. A peeked word stays <span class="peeked-demo">highlighted</span> for the rest
+    of the card &mdash; including after a restart, when it is hidden again &mdash; so you can
+    see exactly which bits need work. Click it again to drop the highlight.
   </p>
 
   <div id="results" hidden>
