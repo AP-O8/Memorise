@@ -8,97 +8,123 @@
 </head>
 <body>
 
-<header>
-  <h1 id="home-link">Memorise</h1>
-  <div class="spacer"></div>
-  <button id="btn-export" class="small">Export backup</button>
-  <label class="small btn-like" for="file-import">Import backup</label>
+<header class="site">
+  <button id="home-link" class="brand" type="button">Memorise</button>
+  <span class="spacer"></span>
+  <button id="btn-export" class="btn ghost small" type="button">Export backup</button>
+  <label class="btn ghost small" for="file-import">Import backup</label>
   <input type="file" id="file-import" accept="application/json" hidden>
 </header>
 
+<main>
+
 <!-- ============ DECK LIST ============ -->
 <section id="view-decks">
-  <h2>Decks</h2>
-  <p class="hint">A deck = one essay. The cards inside it = the paragraphs.</p>
+  <div class="head">
+    <h1>Your decks</h1>
+    <p class="sub">A deck is one essay. The cards inside it are its paragraphs.</p>
+  </div>
 
   <form id="form-deck" class="row">
-    <input id="deck-name" type="text" placeholder="New deck name (e.g. Macbeth essay)" required>
-    <button type="submit">Add deck</button>
+    <input id="deck-name" type="text" placeholder="New deck name, e.g. Macbeth ambition essay" required>
+    <button type="submit" class="btn primary">Add deck</button>
   </form>
 
   <ul id="deck-list" class="list"></ul>
-  <p id="decks-empty" class="hint" hidden>No decks yet. Add one above.</p>
+  <p id="decks-empty" class="empty" hidden>No decks yet. Add one above, then fill it with paragraphs.</p>
 </section>
 
 <!-- ============ ONE DECK ============ -->
 <section id="view-deck" hidden>
-  <button class="link" id="back-to-decks">&larr; All decks</button>
-  <h2 id="deck-title"></h2>
+  <button class="link" id="back-to-decks" type="button">&larr; All decks</button>
+
+  <div class="head">
+    <h1 id="deck-title"></h1>
+    <p class="sub" id="deck-sub"></p>
+  </div>
 
   <div class="row">
-    <button id="btn-type-all">Type the whole essay (all cards in order)</button>
+    <button id="btn-type-all" class="btn primary" type="button">Type the whole essay</button>
   </div>
 
   <ul id="card-list" class="list"></ul>
-  <p id="cards-empty" class="hint" hidden>No cards yet. Add a paragraph below.</p>
+  <p id="cards-empty" class="empty" hidden>No cards yet. Add your first paragraph below.</p>
 
-  <h3 id="editor-heading">Add a card</h3>
-  <form id="form-card">
-    <input id="card-title" type="text" placeholder="Card title (e.g. Paragraph 1 - context)" required>
-    <textarea id="card-text" rows="8" placeholder="Paste the paragraph you want to memorise..." required></textarea>
-    <div class="row">
-      <button type="submit" id="card-submit">Add card</button>
-      <button type="button" id="card-cancel" class="ghost" hidden>Cancel edit</button>
-    </div>
-  </form>
+  <div class="panel">
+    <h2 id="editor-heading">Add a card</h2>
+    <form id="form-card">
+      <input id="card-title" type="text" placeholder="Card title, e.g. Paragraph 1 &mdash; context" required>
+      <textarea id="card-text" rows="7" placeholder="Paste the paragraph you want to memorise..." required></textarea>
+      <div class="row">
+        <button type="submit" id="card-submit" class="btn primary">Add card</button>
+        <button type="button" id="card-cancel" class="btn ghost" hidden>Cancel edit</button>
+      </div>
+    </form>
+  </div>
 </section>
 
 <!-- ============ TYPING ============ -->
 <section id="view-type" hidden>
-  <button class="link" id="back-to-deck">&larr; Back</button>
-  <h2 id="type-title"></h2>
+  <button class="link" id="back-to-deck" type="button">&larr; Back</button>
 
-  <div class="row options">
-    <label><input type="checkbox" id="opt-hide" checked> Hide the text (memory mode)</label>
-    <label><input type="checkbox" id="opt-fuzzy" checked> Accept near-misses (autocorrect)</label>
-    <button id="btn-peek" class="ghost small" type="button">Peek word</button>
-    <button id="btn-reveal" class="ghost small" type="button">Reveal all</button>
-    <button id="btn-restart" class="ghost small" type="button">Restart</button>
+  <div class="head">
+    <h1 id="type-title"></h1>
+    <p class="sub" id="type-sub"></p>
+  </div>
+
+  <div class="toolbar">
+    <button id="btn-study" class="btn ghost" type="button">Study text</button>
+    <button id="btn-peek" class="btn ghost" type="button">Peek word</button>
+    <button id="btn-restart" class="btn ghost" type="button" title="Esc, or Cmd/Ctrl+R">Restart (Esc)</button>
+    <span class="spacer"></span>
+    <label class="check"><input type="checkbox" id="opt-fuzzy" checked> Autocorrect near-misses</label>
   </div>
 
   <div class="stats">
-    <span id="stat-progress">0 / 0</span>
-    <span id="stat-wpm">0 wpm</span>
-    <span id="stat-acc">100%</span>
-    <span id="stat-time">0:00</span>
+    <span class="chip"><b id="stat-progress">0 / 0</b> words</span>
+    <span class="chip"><b id="stat-wpm">0</b> wpm</span>
+    <span class="chip"><b id="stat-acc">100%</b> first time</span>
+    <span class="chip" id="chip-peeks"><b id="stat-peeks">1</b> peek left</span>
+    <span class="chip"><b id="stat-time">0:00</b></span>
   </div>
   <div class="bar"><div id="bar-fill"></div></div>
 
-  <div id="text" class="text" tabindex="0"></div>
-  <input id="capture" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+  <div id="text" class="text hide"></div>
+  <input id="capture" type="text" autocomplete="off" autocorrect="off" autocapitalize="off"
+         spellcheck="false" aria-hidden="true" tabindex="-1">
 
-  <p class="hint">
-    Just type the words &mdash; capitals and punctuation (full stops, commas, apostrophes,
-    speech marks) are ignored, so you never have to type them. A word appears once you have
-    it right; press <b>space</b> to submit a word you are unsure of. With autocorrect on, a
-    near-miss spelling is accepted and shown in yellow. <b>Backspace</b> steps back.
-  </p>
-  <p class="hint">
-    Stuck? <b>Peek word</b> uncovers the word you are on, and clicking any word uncovers
-    that one. A peeked word stays <span class="peeked-demo">highlighted</span> for the rest
-    of the card &mdash; including after a restart, when it is hidden again &mdash; so you can
-    see exactly which bits need work. Click it again to drop the highlight.
-  </p>
-
-  <div id="results" hidden>
-    <h3>Done.</h3>
-    <p id="results-text"></p>
-    <button id="btn-again">Type it again</button>
+  <div id="results" class="panel result" hidden>
+    <h2 id="results-verdict">Done</h2>
+    <p id="results-text" class="sub"></p>
+    <div class="row">
+      <button id="btn-again" class="btn primary" type="button">Type it again</button>
+      <button id="btn-next" class="btn ghost" type="button" hidden>Next card &rarr;</button>
+    </div>
   </div>
+
+  <details class="help">
+    <summary>How this works</summary>
+    <ul>
+      <li>Type the words only. Capitals and punctuation are filled in for you, and typing them
+          anyway is harmless.</li>
+      <li>A word appears once you get it right. Press <b>space</b> to submit a word that has too
+          few or too many letters.</li>
+      <li><b>Autocorrect</b> accepts a near-miss and shows it in yellow. Switch it off for strict
+          spelling.</li>
+      <li><b>Study text</b> works only before your first keystroke. Once you start typing, the
+          full text stays hidden until the run ends.</li>
+      <li><b>One peek per run.</b> Peek the word you are on, or click any word. It stays
+          highlighted so you can see what needs work &mdash; and a <b>second peek sends you back
+          to the beginning</b>.</li>
+      <li><b>Esc</b> or <b>Cmd/Ctrl+R</b> restarts. Highlights survive the restart; the text does
+          not.</li>
+    </ul>
+  </details>
 </section>
 
-<div id="toast" hidden></div>
+</main>
 
+<div id="toast" hidden></div>
 <script src="app.js"></script>
 </body>
 </html>
