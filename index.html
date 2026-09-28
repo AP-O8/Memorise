@@ -72,6 +72,13 @@
     <p class="sub" id="type-sub"></p>
   </div>
 
+  <div class="modes" role="group" aria-label="Practice mode">
+    <button class="btn seg" type="button" data-mode="type">Type it</button>
+    <button class="btn seg" type="button" data-mode="first">First letter</button>
+    <button class="btn seg" type="button" data-mode="choice">Multiple choice</button>
+  </div>
+  <p class="sub mode-hint" id="mode-hint"></p>
+
   <div class="toolbar">
     <button id="btn-study" class="btn ghost" type="button">Study text</button>
     <button id="btn-peek" class="btn ghost" type="button">Peek word</button>
@@ -93,6 +100,8 @@
   <input id="capture" type="text" autocomplete="off" autocorrect="off" autocapitalize="off"
          spellcheck="false" aria-hidden="true" tabindex="-1">
 
+  <div id="choices" class="choices" hidden></div>
+
   <div id="results" class="panel result" hidden>
     <h2 id="results-verdict">Done</h2>
     <p id="results-text" class="sub"></p>
@@ -105,12 +114,17 @@
   <details class="help">
     <summary>How this works</summary>
     <ul>
-      <li>Type the words only. Capitals and punctuation are filled in for you, and typing them
-          anyway is harmless.</li>
-      <li>A word appears once you get it right. Press <b>space</b> to submit a word that has too
-          few or too many letters.</li>
-      <li><b>Autocorrect</b> accepts a near-miss and shows it in yellow. Switch it off for strict
-          spelling.</li>
+      <li><b>Type it</b> &mdash; type every word out. Capitals and punctuation are filled in for
+          you, and typing them anyway is harmless. A word appears once you get it right; press
+          <b>space</b> to submit a word that has too few or too many letters. <b>Autocorrect</b>
+          accepts a near-miss and shows it in yellow; switch it off for strict spelling.</li>
+      <li><b>First letter</b> &mdash; type only the first letter of the next word and the rest of
+          it is written for you. The letter you supplied stays highlighted. Quick drilling of the
+          order of an essay.</li>
+      <li><b>Multiple choice</b> &mdash; pick the next word from four options (click, or press
+          <b>1</b>&ndash;<b>4</b>). The wrong ones are other words from the same paragraph, chosen
+          for a similar length. Easiest mode: use it on a first pass.</li>
+      <li>Switching mode starts the card again, and the same peek rules apply in all three.</li>
       <li><b>Study text</b> works only before your first keystroke. Once you start typing, the
           full text stays hidden until the run ends.</li>
       <li><b>One peek per run.</b> Peek the word you are on, or click any word. It stays

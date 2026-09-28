@@ -8,6 +8,21 @@ cannot cheat your way through a paragraph.
 - The text is hidden. Each word appears once you have typed it.
 - Progress is never saved mid-way: switching cards always restarts from the beginning.
 
+## Three practice modes
+
+Pick one with the buttons at the top of a card. Switching mode starts the card again, and your
+choice is remembered.
+
+- **Type it** — type every word out. The full drill.
+- **First letter** — type only the first letter of the next word and the rest of it is written
+  for you. The letter you supplied stays highlighted, so you can see what you actually recalled.
+  Fast way to drill the order of an essay.
+- **Multiple choice** — pick the next word from four options: click one, or press **1**–**4**.
+  The decoys are other words from the same paragraph, picked for a similar length so the shape
+  does not give the answer away. The easiest mode — good for a first pass over new material.
+
+The peek rules below apply in all three.
+
 ## The rules that make it work
 
 Recall only sticks if forgetting costs you something, so the crutches are deliberately tight:
@@ -26,7 +41,7 @@ Recall only sticks if forgetting costs you something, so the crutches are delibe
 - The end screen grades the run: **Perfect recall** (no peeks, rejects or autocorrects),
   **Clean run** (no peeks or rejects), or "run it again".
 
-## Typing rules
+## Typing rules (Type it mode)
 
 - **Capitals and punctuation are ignored.** You never type full stops, commas, apostrophes,
   speech marks, dashes or capitals — they appear on their own when the word is accepted.
@@ -44,7 +59,9 @@ Recall only sticks if forgetting costs you something, so the crutches are delibe
 
 ## Keys
 
-- Type normally; **space** submits a word; **Backspace** steps back.
+- Type normally; **space** submits a word; **Backspace** steps back a letter, or a word when
+  the current one is empty (in first-letter and multiple-choice modes it steps back a word).
+- **1**–**4** pick an option in multiple choice.
 - **Esc** or **Cmd/Ctrl+R** restarts the card. While you are typing, Cmd/Ctrl+R is taken over
   from the browser's reload; everywhere else in the app it reloads as normal. Esc is the one to
   lean on — a browser that refuses to hand over its reload shortcut would reload the page and

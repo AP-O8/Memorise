@@ -18,6 +18,9 @@
 
 * { box-sizing: border-box; }
 
+/* author styles must not resurrect elements hidden with the attribute */
+[hidden] { display: none !important; }
+
 body {
   margin: 0 auto;
   padding: 0 20px 80px;
@@ -165,6 +168,21 @@ input:focus, textarea:focus { outline: none; border-color: var(--accent); }
 
 /* ---------- typing view ---------- */
 
+.modes { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+.btn.seg {
+  background: transparent;
+  color: var(--dim);
+  padding: 7px 13px;
+  font-size: 13.5px;
+}
+.btn.seg:hover { color: var(--fg); border-color: #3b4146; }
+.btn.seg.active {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: rgba(226, 183, 20, .08);
+}
+.mode-hint { margin-bottom: 16px; }
+
 .toolbar {
   display: flex;
   gap: 8px;
@@ -236,6 +254,26 @@ input:focus, textarea:focus { outline: none; border-color: var(--accent); }
 @keyframes blink { 50% { opacity: 0; } }
 
 #capture { position: fixed; top: -100px; left: -100px; opacity: 0; width: 1px; height: 1px; }
+
+/* the first letter you supplied in first-letter mode */
+.ch.lead { color: var(--accent); font-weight: 600; }
+
+/* ---------- multiple choice ---------- */
+
+.choices { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 22px; }
+.btn.choice { font: 16px/1 var(--mono); padding: 12px 16px; }
+.btn.choice b {
+  color: var(--dim);
+  font: 600 11px var(--ui);
+  margin-right: 8px;
+  vertical-align: 1px;
+}
+.btn.choice:hover b { color: var(--accent); }
+.btn.choice.wrong, .btn.choice.wrong:hover {
+  border-color: var(--err);
+  color: var(--err);
+  background: rgba(210, 89, 106, .12);
+}
 
 /* ---------- results ---------- */
 

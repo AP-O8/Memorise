@@ -8,7 +8,13 @@
   /* ------------------------------------------------------------------ */
 
   var KEY = 'memorise.v1';
-  var data = { decks: [], settings: { fuzzy: true } };
+  var MODES = {
+    type:   { name: 'Type it',         hint: 'Type every word out in full.' },
+    first:  { name: 'First letter',    hint: 'Type only the first letter of the next word \u2014 the rest is written for you.' },
+    choice: { name: 'Multiple choice', hint: 'Pick the next word from four options: click one, or press 1-4.' }
+  };
+
+  var data = { decks: [], settings: { fuzzy: true, mode: 'type' } };
 
   function load() {
     try {
@@ -16,8 +22,9 @@
       if (raw) {
         var parsed = JSON.parse(raw);
         if (parsed && Array.isArray(parsed.decks)) data.decks = parsed.decks;
-        if (parsed && parsed.settings && 'fuzzy' in parsed.settings) {
-          data.settings.fuzzy = !!parsed.settings.fuzzy;
+        if (parsed && parsed.settings) {
+          if ('fuzzy' in parsed.settings) data.settings.fuzzy = !!parsed.settings.fuzzy;
+          if (MODES[parsed.settings.mode]) data.settings.mode = parsed.settings.mode;
         }
       }
     } catch (e) {
@@ -339,7 +346,9 @@
     timer: null,
     running: false,
     deckId: null,
-    cardIndex: null
+    cardIndex: null,
+    mode: 'type',
+    choices: []    // the options on offer in multiple choice
   };
 
   function normalize(s) {
@@ -470,6 +479,7 @@
     T.peeksUsed = 0;
     T.start = null;
     T.running = true;
+    T.mode = data.settings.mode;
     stopTimer();
 
     skipUntypable();
@@ -479,6 +489,7 @@
     $('#results').hidden = true;
     $('#text').classList.add('hide');
     $('#opt-fuzzy').checked = data.settings.fuzzy;
+    buildChoices();
     updateToolbar();
     updateStats();
   }
@@ -506,7 +517,19 @@
     host.innerHTML = '';
 
     if (state === 'done' || state === 'fixed') {
-      appendChars(host, tok.display, 'ch ok');
+      if (T.mode === 'first') {
+        // mark the one letter you actually supplied
+        var chars = Array.from(tok.display);
+        var lead = -1;
+        for (var c = 0; c < chars.length; c++) {
+          if (/[a-z0-9]/i.test(chars[c])) { lead = c; break; }
+        }
+        chars.forEach(function (ch, idx) {
+          host.appendChild(el('span', 'ch ok' + (idx === lead ? ' lead' : ''), ch));
+        });
+      } else {
+        appendChars(host, tok.display, 'ch ok');
+      }
       return;
     }
     if (state === 'pending') {
@@ -532,20 +555,43 @@
 
   /* ---- typing ---- */
 
-  function typeChar(ch) {
-    if (T.locked || !T.running || T.i >= T.tokens.length) return;
-
-    if (/\s/.test(ch)) { submitWord(); return; }
-
-    var lower = ch.toLowerCase();
-    if (!/[a-z0-9]/.test(lower)) return; // punctuation is never required, and never wrong
-
+  function beginTyping() {
     if (!T.started) {
       T.started = true;
       if (T.studying) setStudy(false);
       updateToolbar();
     }
     if (!T.start) { T.start = Date.now(); startTimer(); }
+  }
+
+  function typeChar(ch) {
+    if (T.locked || !T.running || T.i >= T.tokens.length) return;
+
+    // multiple choice: 1-4 pick an option, nothing else types
+    if (T.mode === 'choice') {
+      var pick = parseInt(ch, 10);
+      if (pick >= 1 && pick <= T.choices.length) chooseOption(pick - 1);
+      return;
+    }
+
+    if (/\s/.test(ch)) {
+      if (T.mode === 'type') submitWord();
+      return;
+    }
+
+    var lower = ch.toLowerCase();
+    if (!/[a-z0-9]/.test(lower)) return; // punctuation is never required, and never wrong
+
+    // first letter: the right opening letter writes the whole word
+    if (T.mode === 'first') {
+      beginTyping();
+      if (lower === T.tokens[T.i].core[0]) accept('done');
+      else reject();
+      updateStats();
+      return;
+    }
+
+    beginTyping();
 
     var tok = T.tokens[T.i];
     if (T.buf.length >= tok.core.length + 8) return;
@@ -581,6 +627,7 @@
       T.state[T.i] = 'current';
       renderWord(T.i);
       keepInView(T.i);
+      buildChoices();
     } else {
       finish();
     }
@@ -616,6 +663,7 @@
     T.i = j;
     T.state[T.i] = 'current';
     renderWord(T.i);
+    buildChoices();
     updateStats();
   }
 
@@ -626,6 +674,72 @@
     if (box.bottom > window.innerHeight - 40 || box.top < 60) {
       host.scrollIntoView({ block: 'center' });
     }
+  }
+
+  /* ---- multiple choice ---- */
+
+  function shuffle(list) {
+    for (var i = list.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = list[i]; list[i] = list[j]; list[j] = t;
+    }
+    return list;
+  }
+
+  function buildChoices() {
+    var box = $('#choices');
+    box.innerHTML = '';
+    T.choices = [];
+    if (T.mode !== 'choice' || !T.running || T.i >= T.tokens.length) {
+      box.hidden = true;
+      return;
+    }
+
+    var answer = T.tokens[T.i];
+    var seen = {};
+    var pool = [];
+    T.tokens.forEach(function (tok) {
+      if (!tok.core || tok.core === answer.core || seen[tok.core]) return;
+      seen[tok.core] = true;
+      pool.push(tok);
+    });
+
+    // prefer decoys of a similar length, so shape alone does not give it away
+    pool.sort(function (a, b) {
+      return Math.abs(a.core.length - answer.core.length) - Math.abs(b.core.length - answer.core.length);
+    });
+    var options = shuffle(pool.slice(0, 8)).slice(0, 3);
+    options.push(answer);
+    shuffle(options);
+
+    T.choices = options;
+    options.forEach(function (tok, n) {
+      var b = el('button', 'btn choice');
+      b.appendChild(el('b', null, String(n + 1)));
+      b.appendChild(document.createTextNode(tok.display));
+      b.onclick = function () { chooseOption(n); focusCapture(); };
+      box.appendChild(b);
+    });
+    box.hidden = false;
+  }
+
+  function chooseOption(n) {
+    if (T.locked || !T.running || T.mode !== 'choice') return;
+    var picked = T.choices[n];
+    if (!picked) return;
+    beginTyping();
+
+    if (picked.core === T.tokens[T.i].core) {
+      accept('done');
+    } else {
+      T.wrong++;
+      var btn = $('#choices').children[n];
+      if (btn) {
+        btn.classList.add('wrong');
+        setTimeout(function () { btn.classList.remove('wrong'); }, 450);
+      }
+    }
+    updateStats();
   }
 
   /* ---- studying and peeking ---- */
@@ -675,6 +789,7 @@
     T.locked = true;
     T.running = false;
     stopTimer();
+    buildChoices();
     updateToolbar();
     toast('Second peek — read it, then start again from the beginning.');
     setTimeout(function () {
@@ -692,6 +807,7 @@
   function finish() {
     T.running = false;
     stopTimer();
+    buildChoices();
 
     var seconds = T.start ? (Date.now() - T.start) / 1000 : 0;
     var clean = T.peeksUsed === 0 && T.wrong === 0;
@@ -752,7 +868,31 @@
     $('#bar-fill').style.width = (T.total ? (done / T.total) * 100 : 0) + '%';
   }
 
+  function modeName(mode) {
+    return (MODES[mode] || MODES.type).name;
+  }
+
+  function setMode(mode) {
+    if (!MODES[mode] || data.settings.mode === mode) return;
+    data.settings.mode = mode;
+    save();
+    if ($('#view-type').hidden) {
+      updateToolbar();
+      return;
+    }
+    reset();
+    focusCapture();
+    toast(modeName(mode) + ' \u2014 starting the card again.');
+  }
+
   function updateToolbar() {
+    var mode = $('#view-type').hidden ? data.settings.mode : T.mode;
+    Array.prototype.forEach.call(document.querySelectorAll('.btn.seg'), function (btn) {
+      btn.classList.toggle('active', btn.dataset.mode === data.settings.mode);
+    });
+    $('#mode-hint').textContent = (MODES[mode] || MODES.type).hint;
+    $('#opt-fuzzy').closest('label').hidden = mode !== 'type';
+
     var study = $('#btn-study');
     study.textContent = T.studying ? 'Hide text' : 'Study text';
     study.disabled = T.started || !T.running;
@@ -868,6 +1008,10 @@
     focusCapture();
   };
 
+  Array.prototype.forEach.call(document.querySelectorAll('.btn.seg'), function (btn) {
+    btn.onclick = function () { setMode(btn.dataset.mode); };
+  });
+
   $('#btn-restart').onclick = restartCard;
   $('#btn-again').onclick = restartCard;
   $('#btn-next').onclick = nextCard;
@@ -927,5 +1071,6 @@
 
   load();
   renderDecks();
+  updateToolbar();
   show('decks');
 })();
