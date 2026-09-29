@@ -38,8 +38,39 @@ Recall only sticks if forgetting costs you something, so the crutches are delibe
 - **Peek highlights persist.** Every word you peeked at stays highlighted for as long as you
   stay on that card, including across restarts — so your weak spots pile up in front of you.
   Click a highlight to clear it. Marking a word you have already typed is free.
-- The end screen grades the run: **Perfect recall** (no peeks, rejects or autocorrects),
-  **Clean run** (no peeks or rejects), or "run it again".
+- The end screen grades the run: **Perfect recall** (word for word, no help at all),
+  **Clean run** (nothing rejected, ideas all there), or "run it again", and breaks down how many
+  words were autocorrected, accepted as synonyms, or filled in for you.
+
+## Meaning, not just wording (Type it mode)
+
+If the point is remembering the *ideas*, being marked wrong for a synonym is noise. With
+**Accept synonyms & skipped fillers** on (the default):
+
+- **Synonyms count.** Type `show` where the essay says `illustrates` and it is accepted — the
+  real word is then written in blue, so you still see the wording you are aiming for.
+- **Word endings do not matter.** `showing` for `shows`, `demonstrated` for `demonstrates`,
+  `hurry` for `hurried`.
+- **Skipped fillers are filled in.** If you go straight from `illustrates` to `theocratic`, the
+  `that the` in between is written in for you in grey italics — up to two small function words
+  (`that`, `the`, `of`, `is`, `and`…) at a time, and only when the next word you type is right.
+- **Extra fillers are ignored.** Typing a `the` the essay does not have is not counted wrong.
+- Switch it off for word-perfect practice; then only spelling slips are forgiven.
+
+Roughly forty groups of common essay words are built in — show / illustrate / demonstrate /
+convey / reveal, suggest / imply / indicate, emphasise / stress / underline, undermine / erode /
+subvert, and so on. For anything specific to your text, open **Synonyms** on the decks screen and
+add your own: one group per line, words separated by commas.
+
+```
+theocratic, religious, puritanical
+hysteria, mass panic, frenzy
+```
+
+Your groups are saved with your decks and travel in the backup file.
+
+Synonyms apply to **Type it** only. First letter compares one letter, and multiple choice gives
+you the exact words to pick from.
 
 ## Typing rules (Type it mode)
 

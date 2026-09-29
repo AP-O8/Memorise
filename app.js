@@ -14,7 +14,7 @@
     choice: { name: 'Multiple choice', hint: 'Pick the next word from four options: click one, or press 1-4.' }
   };
 
-  var data = { decks: [], settings: { fuzzy: true, mode: 'type' } };
+  var data = { decks: [], synonyms: [], settings: { fuzzy: true, meaning: true, mode: 'type' } };
 
   function load() {
     try {
@@ -22,8 +22,10 @@
       if (raw) {
         var parsed = JSON.parse(raw);
         if (parsed && Array.isArray(parsed.decks)) data.decks = parsed.decks;
+        if (parsed && Array.isArray(parsed.synonyms)) data.synonyms = parsed.synonyms;
         if (parsed && parsed.settings) {
           if ('fuzzy' in parsed.settings) data.settings.fuzzy = !!parsed.settings.fuzzy;
+          if ('meaning' in parsed.settings) data.settings.meaning = !!parsed.settings.meaning;
           if (MODES[parsed.settings.mode]) data.settings.mode = parsed.settings.mode;
         }
       }
@@ -333,6 +335,8 @@
     buf: '',       // letters typed so far for that word
     exact: 0,
     fixed: 0,
+    para: 0,     // accepted as the same meaning
+    given: 0,    // filler words filled in because you skipped them
     wrong: 0,
     total: 0,      // words that actually have to be typed
     open: {},      // words uncovered right now, cleared on restart
@@ -419,6 +423,160 @@
     return distance(typed, target) <= slack(target);
   }
 
+  /* ---- meaning, not just letters ---- */
+
+  // small function words you can drop without losing the idea
+  var FILLERS = {};
+  ('a an the this that these those of to in on at by for with from into as is are was were be been being ' +
+   'and but or nor so yet then thus hence also just very such it its his her their our your my which who whom ' +
+   'not no than when while where how what all any some more most own same too can will would could should ' +
+   'has have had do does did about over under out up down off again ever even only').split(' ')
+    .forEach(function (w) { FILLERS[w] = true; });
+
+  // words that mean the same thing in essay writing; the user can add more
+  var BUILTIN_SYNONYMS = [
+    ['show', 'illustrate', 'demonstrate', 'convey', 'present', 'depict', 'portray', 'reveal',
+     'display', 'exhibit', 'express', 'communicate', 'articulate', 'render'],
+    ['suggest', 'imply', 'hint', 'insinuate', 'intimate', 'connote', 'signal', 'indicate'],
+    ['emphasise', 'emphasize', 'stress', 'underline', 'underscore', 'accentuate', 'highlight',
+     'foreground', 'spotlight'],
+    ['explore', 'examine', 'investigate', 'interrogate', 'probe', 'analyse', 'analyze', 'consider', 'study'],
+    ['criticise', 'criticize', 'condemn', 'denounce', 'attack', 'censure', 'rebuke', 'indict'],
+    ['symbolise', 'symbolize', 'represent', 'embody', 'signify', 'personify', 'epitomise', 'epitomize'],
+    ['reinforce', 'strengthen', 'bolster', 'cement', 'consolidate', 'entrench', 'compound'],
+    ['undermine', 'weaken', 'erode', 'destabilise', 'destabilize', 'subvert', 'challenge', 'question'],
+    ['create', 'produce', 'generate', 'establish', 'construct', 'form', 'build', 'forge', 'craft'],
+    ['cause', 'lead', 'result', 'trigger', 'prompt', 'provoke', 'spark', 'drive', 'breed'],
+    ['reflect', 'mirror', 'echo', 'parallel', 'recall'],
+    ['use', 'employ', 'utilise', 'utilize', 'deploy', 'apply', 'harness', 'wield'],
+    ['hide', 'conceal', 'mask', 'obscure', 'veil', 'disguise', 'cloak'],
+    ['destroy', 'ruin', 'devastate', 'annihilate', 'demolish', 'wreck', 'shatter'],
+    ['fight', 'struggle', 'battle', 'combat', 'resist', 'contend', 'oppose'],
+    ['change', 'transform', 'alter', 'shift', 'convert', 'reshape'],
+    ['begin', 'start', 'open', 'commence', 'initiate'],
+    ['end', 'conclude', 'finish', 'close', 'culminate', 'terminate'],
+    ['help', 'aid', 'assist', 'support', 'facilitate'],
+    ['allow', 'enable', 'permit', 'let'],
+    ['believe', 'think', 'feel', 'consider', 'hold', 'maintain', 'contend'],
+    ['want', 'desire', 'wish', 'crave', 'long', 'yearn'],
+    ['important', 'significant', 'crucial', 'vital', 'key', 'central', 'essential', 'pivotal',
+     'fundamental', 'critical'],
+    ['idea', 'concept', 'notion', 'theme', 'point', 'argument'],
+    ['power', 'authority', 'control', 'dominance', 'domination', 'supremacy'],
+    ['fear', 'terror', 'dread', 'anxiety', 'panic', 'paranoia'],
+    ['suffering', 'pain', 'anguish', 'torment', 'misery', 'agony'],
+    ['corrupt', 'immoral', 'depraved', 'debased', 'degenerate'],
+    ['moral', 'ethical', 'righteous', 'virtuous', 'upright'],
+    ['society', 'community', 'world', 'culture', 'civilisation', 'civilization'],
+    ['audience', 'reader', 'viewer', 'spectator', 'onlooker'],
+    ['character', 'figure', 'persona', 'protagonist'],
+    ['writer', 'author', 'playwright', 'poet', 'novelist'],
+    ['big', 'large', 'great', 'vast', 'immense', 'enormous', 'huge', 'profound'],
+    ['small', 'minor', 'slight', 'limited', 'minimal', 'trivial'],
+    ['quickly', 'rapidly', 'swiftly', 'immediately', 'instantly', 'promptly'],
+    ['clearly', 'evidently', 'plainly', 'obviously', 'manifestly', 'undeniably'],
+    ['often', 'frequently', 'repeatedly', 'regularly', 'commonly', 'routinely'],
+    ['however', 'but', 'yet', 'although', 'though', 'whereas', 'conversely'],
+    ['therefore', 'thus', 'hence', 'consequently', 'accordingly', 'so'],
+    ['furthermore', 'moreover', 'additionally', 'also', 'besides'],
+    ['finally', 'ultimately', 'eventually', 'lastly'],
+    ['because', 'since', 'as'],
+    ['extent', 'degree', 'level', 'amount', 'measure']
+  ];
+
+  var synIndex = {};
+
+  // every shape a word might be stored or typed in: shows / show, illustrates /
+  // illustrate, revealing / reveal, hurried / hurry
+  function roots(w) {
+    var out = {}, bases = [];
+    out[w] = true;
+
+    if (w.length > 4 && /ies$/.test(w)) bases.push(w.slice(0, -3) + 'y');
+    if (w.length > 3 && /s$/.test(w) && !/ss$/.test(w)) bases.push(w.slice(0, -1));
+    if (w.length > 4 && /es$/.test(w)) bases.push(w.slice(0, -2));
+    if (w.length > 5 && /ing$/.test(w)) { bases.push(w.slice(0, -3), w.slice(0, -3) + 'e'); }
+    if (w.length > 4 && /ed$/.test(w)) { bases.push(w.slice(0, -2), w.slice(0, -1)); }
+    if (w.length > 4 && /ly$/.test(w)) bases.push(w.slice(0, -2));
+
+    bases.forEach(function (b) {
+      if (b.length < 3) return;
+      out[b] = true;
+      // "running" -> "runn" -> "run"
+      if (/([bdfglmnprt])\1$/.test(b)) out[b.slice(0, -1)] = true;
+      if (/i$/.test(b)) out[b.slice(0, -1) + 'y'] = true;   // "hurried" -> "hurri" -> "hurry"
+    });
+    return out;
+  }
+
+  function shareRoot(a, b) {
+    if (a === b) return true;
+    var ra = roots(a), rb = roots(b);
+    for (var k in ra) if (rb[k]) return true;
+    return false;
+  }
+
+  function buildSynonymIndex() {
+    synIndex = {};
+    var groups = BUILTIN_SYNONYMS.concat(data.synonyms || []);
+    groups.forEach(function (words, gi) {
+      if (!words || words.length < 2) return;
+      words.forEach(function (w) {
+        var c = coreOf(String(w));
+        if (!c) return;
+        var forms = roots(c);
+        for (var form in forms) if (!(form in synIndex)) synIndex[form] = gi;
+      });
+    });
+  }
+
+  function groupOf(word) {
+    if (word in synIndex) return synIndex[word];
+    var forms = roots(word);
+    for (var form in forms) if (form in synIndex) return synIndex[form];
+    return undefined;
+  }
+
+  function sameMeaning(typed, target) {
+    if (shareRoot(typed, target)) return true;
+    var a = groupOf(typed), b = groupOf(target);
+    return a !== undefined && a === b;
+  }
+
+  function meaningOn() {
+    return data.settings.meaning !== false;
+  }
+
+  function nextTypable(from) {
+    for (var i = from; i < T.tokens.length; i++) if (T.tokens[i].core) return i;
+    return -1;
+  }
+
+  // how does this typed word fit the text from here on?
+  function resolve(typed) {
+    var tok = T.tokens[T.i];
+    if (typed === tok.core) return { kind: 'done', skipped: [] };
+    if (isNearMiss(typed, tok.core)) return { kind: 'fixed', skipped: [] };
+    if (meaningOn() && sameMeaning(typed, tok.core)) return { kind: 'para', skipped: [] };
+    if (!meaningOn()) return null;
+
+    // you skipped a filler word: look past up to two of them
+    var skipped = [];
+    var idx = T.i;
+    for (var step = 0; step < 2; step++) {
+      if (!FILLERS[T.tokens[idx].core]) break;
+      skipped.push(idx);
+      idx = nextTypable(idx + 1);
+      if (idx < 0) break;
+      var next = T.tokens[idx].core;
+      var kind = typed === next ? 'done'
+               : isNearMiss(typed, next) ? 'fixed'
+               : sameMeaning(typed, next) ? 'para' : null;
+      if (kind) return { kind: kind, skipped: skipped.slice(), target: idx };
+    }
+    return null;
+  }
+
   /* ---- starting a run ---- */
 
   function startCard(deck, index) {
@@ -470,6 +628,8 @@
     T.buf = '';
     T.exact = 0;
     T.fixed = 0;
+    T.para = 0;
+    T.given = 0;
     T.wrong = 0;
     T.open = {};                   // peek marks survive, uncovered words do not
     T.started = false;
@@ -489,6 +649,7 @@
     $('#results').hidden = true;
     $('#text').classList.add('hide');
     $('#opt-fuzzy').checked = data.settings.fuzzy;
+    $('#opt-meaning').checked = meaningOn();
     buildChoices();
     updateToolbar();
     updateStats();
@@ -516,7 +677,7 @@
     host.className = 'word ' + state + (T.marked[i] ? ' peeked' : '');
     host.innerHTML = '';
 
-    if (state === 'done' || state === 'fixed') {
+    if (state === 'done' || state === 'fixed' || state === 'para' || state === 'given') {
       if (T.mode === 'first') {
         // mark the one letter you actually supplied
         var chars = Array.from(tok.display);
@@ -594,31 +755,59 @@
     beginTyping();
 
     var tok = T.tokens[T.i];
-    if (T.buf.length >= tok.core.length + 8) return;
+    if (T.buf.length >= Math.max(tok.core.length + 8, 18)) return;
 
     T.buf += lower;
     renderWord(T.i);
 
-    // full length reached: take it if it is right, or close enough
+    // full length reached: take it if it is right, or close enough. A synonym waits for
+    // the space, so a longer word is not cut short ("demonstrates" -> "demonstrate").
     if (T.buf.length >= tok.core.length) {
       if (T.buf === tok.core) accept('done');
       else if (isNearMiss(T.buf, tok.core)) accept('fixed');
+      // on the very last word there is nothing left to overrun into, so a synonym
+      // can land without waiting for a space that may never come
+      else if (meaningOn() && nextTypable(T.i + 1) < 0 && sameMeaning(T.buf, tok.core)) accept('para');
     }
     updateStats();
   }
 
   function submitWord() {
     if (T.locked || !T.running || !T.buf.length) return;
-    var tok = T.tokens[T.i];
-    if (T.buf === tok.core) accept('done');
-    else if (isNearMiss(T.buf, tok.core)) accept('fixed');
-    else reject();
+    var typed = T.buf;
+    var hit = resolve(typed);
+
+    if (hit) {
+      hit.skipped.forEach(fillIn);        // the fillers you left out
+      if (hit.skipped.length) {
+        T.i = hit.target;
+        T.state[T.i] = 'current';
+      }
+      accept(hit.kind);
+    } else if (meaningOn() && typed.length <= 2 && !FILLERS[T.tokens[T.i].core]) {
+      T.buf = '';                          // leftovers such as the "s" of a longer ending
+      renderWord(T.i);
+    } else if (meaningOn() && FILLERS[typed] && !FILLERS[T.tokens[T.i].core]) {
+      T.buf = '';                          // a filler the text does not have: ignore it
+      renderWord(T.i);
+    } else {
+      reject();
+    }
     updateStats();
+  }
+
+  // a filler word you skipped past is written in for you
+  function fillIn(i) {
+    T.state[i] = 'given';
+    T.given++;
+    renderWord(i);
   }
 
   function accept(kind) {
     T.state[T.i] = kind;
-    if (kind === 'fixed') T.fixed++; else T.exact++;
+    if (kind === 'fixed') T.fixed++;
+    else if (kind === 'para') T.para++;
+    else T.exact++;
     renderWord(T.i);
     T.buf = '';
     T.i++;
@@ -655,7 +844,15 @@
     while (j >= 0 && T.tokens[j].core === '') j--;
     if (j < 0) return;
 
-    if (T.state[j] === 'fixed') T.fixed--; else T.exact--;
+    // walk back over any fillers that were written in for you
+    while (j > 0 && T.state[j] === 'given') { T.given--; T.state[j] = 'pending'; renderWord(j); j--; }
+    while (j >= 0 && !T.tokens[j].core) j--;
+    if (j < 0) return;
+
+    if (T.state[j] === 'fixed') T.fixed--;
+    else if (T.state[j] === 'para') T.para--;
+    else if (T.state[j] === 'given') T.given--;
+    else T.exact--;
     for (var k = j; k <= T.i && k < T.tokens.length; k++) {
       T.state[k] = 'pending';
       renderWord(k);
@@ -757,7 +954,7 @@
     if (!tok || !tok.core) return;
 
     // already on the page: marking it for attention is free
-    if (T.state[i] === 'done' || T.state[i] === 'fixed') {
+    if (T.state[i] !== 'pending' && T.state[i] !== 'current') {
       if (T.marked[i]) delete T.marked[i]; else T.marked[i] = true;
       renderWord(i);
       return;
@@ -811,21 +1008,21 @@
 
     var seconds = T.start ? (Date.now() - T.start) / 1000 : 0;
     var clean = T.peeksUsed === 0 && T.wrong === 0;
-    var perfect = clean && T.fixed === 0;
+    var perfect = clean && T.fixed === 0 && T.para === 0 && T.given === 0;
 
     $('#results-verdict').textContent = perfect
-      ? 'Perfect recall.'
-      : clean ? 'Clean run — no peeks, no rejects.' : 'Done. Run it again for a clean one.';
+      ? 'Perfect recall — word for word.'
+      : clean ? 'Clean run — the ideas were all there.' : 'Done. Run it again for a clean one.';
     $('#results').classList.toggle('plain', !clean);
 
-    $('#results-text').textContent = [
-      wpm() + ' wpm',
-      accuracy() + '% first time',
-      plural(T.fixed, 'autocorrect', 'autocorrects'),
-      plural(T.wrong, 'reject', 'rejects'),
-      plural(T.peeksUsed, 'peek', 'peeks'),
-      fmtTime(seconds)
-    ].join('  ·  ');
+    var parts = [wpm() + ' wpm', accuracy() + '% word for word'];
+    if (T.fixed) parts.push(plural(T.fixed, 'autocorrect', 'autocorrects'));
+    if (T.para) parts.push(plural(T.para, 'synonym', 'synonyms'));
+    if (T.given) parts.push(plural(T.given, 'filler filled in', 'fillers filled in'));
+    parts.push(plural(T.wrong, 'reject', 'rejects'));
+    parts.push(plural(T.peeksUsed, 'peek', 'peeks'));
+    parts.push(fmtTime(seconds));
+    $('#results-text').textContent = parts.join('  ·  ');
 
     var deck = deckById(T.deckId);
     var hasNext = deck && T.cardIndex != null && T.cardIndex + 1 < deck.cards.length;
@@ -838,7 +1035,7 @@
     }
   }
 
-  function attempts() { return T.exact + T.fixed + T.wrong; }
+  function attempts() { return T.exact + T.fixed + T.para + T.wrong; }
 
   function accuracy() {
     return attempts() ? Math.round(T.exact / attempts() * 100) : 100;
@@ -848,7 +1045,7 @@
     if (!T.start) return 0;
     var minutes = (Date.now() - T.start) / 60000;
     if (minutes <= 0) return 0;
-    return Math.round((T.exact + T.fixed) / minutes);
+    return Math.round((T.exact + T.fixed + T.para) / minutes);
   }
 
   function fmtTime(seconds) {
@@ -857,7 +1054,7 @@
   }
 
   function updateStats() {
-    var done = T.exact + T.fixed;
+    var done = T.exact + T.fixed + T.para + T.given;
     $('#stat-progress').textContent = done + ' / ' + T.total;
     $('#stat-wpm').textContent = wpm();
     $('#stat-acc').textContent = accuracy() + '%';
@@ -892,6 +1089,7 @@
     });
     $('#mode-hint').textContent = (MODES[mode] || MODES.type).hint;
     $('#opt-fuzzy').closest('label').hidden = mode !== 'type';
+    $('#opt-meaning').closest('label').hidden = mode !== 'type';
 
     var study = $('#btn-study');
     study.textContent = T.studying ? 'Hide text' : 'Study text';
@@ -994,6 +1192,12 @@
     focusCapture();
   };
 
+  $('#opt-meaning').onchange = function () {
+    data.settings.meaning = this.checked;
+    save();
+    focusCapture();
+  };
+
   $('#btn-study').onclick = function () {
     if (T.started) {
       toast('No full reveals once you have started. Restart if you need to study again.');
@@ -1029,7 +1233,8 @@
   /* ------------------------------------------------------------------ */
 
   $('#btn-export').onclick = function () {
-    var blob = new Blob([JSON.stringify({ decks: data.decks }, null, 2)], { type: 'application/json' });
+    var blob = new Blob([JSON.stringify({ decks: data.decks, synonyms: data.synonyms }, null, 2)],
+                        { type: 'application/json' });
     var a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = 'memorise-backup.json';
@@ -1055,6 +1260,11 @@
             })
           });
         });
+        if (Array.isArray(parsed.synonyms)) {
+          data.synonyms = data.synonyms.concat(parsed.synonyms);
+          buildSynonymIndex();
+          renderSynonyms();
+        }
         save();
         renderDecks();
         show('decks');
@@ -1069,7 +1279,41 @@
 
   /* ------------------------------------------------------------------ */
 
+  /* ------------------------------------------------------------------ */
+  /* your own synonyms                                                   */
+  /* ------------------------------------------------------------------ */
+
+  function renderSynonyms() {
+    $('#syn-text').value = (data.synonyms || []).map(function (g) { return g.join(', '); }).join('\n');
+    $('#syn-count').textContent = data.synonyms.length
+      ? plural(data.synonyms.length, 'group', 'groups') + ' of your own'
+      : 'none of your own yet';
+  }
+
+  $('#form-syn').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var groups = $('#syn-text').value.split('\n').map(function (line) {
+      var seen = {}, out = [];
+      line.split(',').map(function (w) { return w.trim(); }).filter(Boolean).forEach(function (w) {
+        var c = coreOf(w);
+        if (c && !seen[c]) { seen[c] = true; out.push(w); }
+      });
+      return out;
+    }).filter(function (g) { return g.length >= 2; });
+
+    data.synonyms = groups;
+    save();
+    buildSynonymIndex();
+    renderSynonyms();
+    toast(groups.length ? 'Saved ' + plural(groups.length, 'synonym group', 'synonym groups')
+                        : 'Your synonym groups are now empty');
+  });
+
+  /* ------------------------------------------------------------------ */
+
   load();
+  buildSynonymIndex();
+  renderSynonyms();
   renderDecks();
   updateToolbar();
   show('decks');

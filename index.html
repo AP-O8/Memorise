@@ -32,6 +32,21 @@
 
   <ul id="deck-list" class="list"></ul>
   <p id="decks-empty" class="empty" hidden>No decks yet. Add one above, then fill it with paragraphs.</p>
+
+  <details class="panel syn">
+    <summary>Synonyms &mdash; <span id="syn-count"></span></summary>
+    <p class="sub">
+      Common essay words are already grouped (show / illustrate / demonstrate / reveal, suggest /
+      imply, undermine / erode, and so on), and different endings of the same word always match
+      (<b>showing</b> for <b>shows</b>). Add anything else your essays use: one group per line,
+      words separated by commas.
+    </p>
+    <form id="form-syn">
+      <textarea id="syn-text" rows="6"
+        placeholder="theocratic, religious, puritanical&#10;hysteria, mass panic, frenzy"></textarea>
+      <button type="submit" class="btn primary">Save synonyms</button>
+    </form>
+  </details>
 </section>
 
 <!-- ============ ONE DECK ============ -->
@@ -85,6 +100,7 @@
     <button id="btn-restart" class="btn ghost" type="button" title="Esc, or Cmd/Ctrl+R">Restart (Esc)</button>
     <span class="spacer"></span>
     <label class="check"><input type="checkbox" id="opt-fuzzy" checked> Autocorrect near-misses</label>
+    <label class="check"><input type="checkbox" id="opt-meaning" checked> Accept synonyms &amp; skipped fillers</label>
   </div>
 
   <div class="stats">
@@ -101,6 +117,14 @@
          spellcheck="false" aria-hidden="true" tabindex="-1">
 
   <div id="choices" class="choices" hidden></div>
+
+  <p class="legend">
+    <span class="key ok">word</span> exactly right
+    <span class="key fixed">word</span> spelling fixed
+    <span class="key para">word</span> your synonym, real word shown
+    <span class="key given">word</span> filler you skipped
+    <span class="key peeked">word</span> peeked
+  </p>
 
   <div id="results" class="panel result" hidden>
     <h2 id="results-verdict">Done</h2>
@@ -125,6 +149,12 @@
           <b>1</b>&ndash;<b>4</b>). The wrong ones are other words from the same paragraph, chosen
           for a similar length. Easiest mode: use it on a first pass.</li>
       <li>Switching mode starts the card again, and the same peek rules apply in all three.</li>
+      <li><b>Synonyms and skipped fillers</b> (Type it mode) &mdash; typing <b>show</b> where the
+          essay says <b>illustrates</b> is accepted, and the real word is written in blue so you
+          still see the wording. Skipping a filler word or two (<b>that</b>, <b>the</b>, <b>of</b>)
+          is allowed if the next word you type is right; the skipped word appears greyed. Typing an
+          extra filler the essay does not have is ignored rather than marked wrong. Switch it off
+          with <b>Accept synonyms &amp; skipped fillers</b> for word-perfect practice.</li>
       <li><b>Study text</b> works only before your first keystroke. Once you start typing, the
           full text stays hidden until the run ends.</li>
       <li><b>One peek per run.</b> Peek the word you are on, or click any word. It stays
