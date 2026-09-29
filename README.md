@@ -8,7 +8,7 @@ cannot cheat your way through a paragraph.
 - The text is hidden. Each word appears once you have typed it.
 - Progress is never saved mid-way: switching cards always restarts from the beginning.
 
-## Three practice modes
+## Four practice modes
 
 Pick one with the buttons at the top of a card. Switching mode starts the card again, and your
 choice is remembered.
@@ -21,7 +21,18 @@ choice is remembered.
   The decoys are other words from the same paragraph, picked for a similar length so the shape
   does not give the answer away. The easiest mode — good for a first pass over new material.
 
-The peek rules below apply in all three.
+- **Read only** — nothing to type. The paragraph is laid out as a first-letters prompt sheet:
+
+  ```
+  M_____ p_______ S____ a_ a c_____ s______.
+  ```
+
+  Punctuation stays visible, so you can recite it aloud from the shape of the sentence. Click any
+  word to uncover it (free, no peek spent) and click again to cover it up; the words you uncovered
+  stay highlighted as the ones to work on. **Study text** shows the whole paragraph, **Cover all
+  up** hides it again.
+
+The peek rules below apply to the three typing modes.
 
 ## Starting where you left off: sentence ticks
 
@@ -84,8 +95,8 @@ hysteria, mass panic, frenzy
 
 Your groups are saved with your decks and travel in the backup file.
 
-Synonyms apply to **Type it** only. First letter compares one letter, and multiple choice gives
-you the exact words to pick from.
+Synonyms apply to **Type it** only. First letter compares one letter, multiple choice gives you
+the exact words to pick from, and read only never judges anything.
 
 ## Typing rules (Type it mode)
 

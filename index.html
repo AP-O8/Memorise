@@ -91,6 +91,7 @@
     <button class="btn seg" type="button" data-mode="type">Type it</button>
     <button class="btn seg" type="button" data-mode="first">First letter</button>
     <button class="btn seg" type="button" data-mode="choice">Multiple choice</button>
+    <button class="btn seg" type="button" data-mode="read">Read only</button>
   </div>
   <p class="sub mode-hint" id="mode-hint"></p>
 
@@ -123,7 +124,7 @@
 
   <div id="choices" class="choices" hidden></div>
 
-  <p class="legend">
+  <p class="legend" id="legend">
     <span class="key ok">word</span> exactly right
     <span class="key fixed">word</span> spelling fixed
     <span class="key para">word</span> your synonym, real word shown
@@ -166,6 +167,10 @@
       <li><b>One peek per run.</b> Peek the word you are on, or click any word. It stays
           highlighted so you can see what needs work &mdash; and a <b>second peek sends you back
           to the beginning</b>.</li>
+      <li><b>Read only</b> &mdash; no typing at all: the paragraph is laid out as a first-letters
+          prompt sheet (<span class="mono">M_____ p_______ S____ a_ a c_____ s______.</span>) for
+          reciting from, out loud or in your head. Punctuation stays visible. Click any word to
+          uncover it and click again to cover it back up; <b>Study text</b> shows the lot.</li>
       <li><b>Sentence ticks</b> &mdash; each sentence has a numbered box in front of it. Tick the
           ones you already know and they are written in and stepped over, so you start at the first
           sentence you have not learnt. Ticks are kept with the card, in every mode, and

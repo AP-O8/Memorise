@@ -396,3 +396,5 @@ input:focus, textarea:focus { outline: none; border-color: var(--accent); }
 .tick.on { border-color: var(--dimmer); color: var(--dimmer); }
 
 .legend .key.known { color: var(--dimmer); }
+
+.mono { font-family: var(--mono); color: var(--fg); }

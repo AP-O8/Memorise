@@ -11,7 +11,8 @@
   var MODES = {
     type:   { name: 'Type it',         hint: 'Type every word out in full.' },
     first:  { name: 'First letter',    hint: 'Type only the first letter of the next word \u2014 the rest is written for you.' },
-    choice: { name: 'Multiple choice', hint: 'Pick the next word from four options: click one, or press 1-4.' }
+    choice: { name: 'Multiple choice', hint: 'Pick the next word from four options: click one, or press 1-4.' },
+    read:   { name: 'Read only',       hint: 'Nothing to type: only the first letter of each word is shown. Click a word to uncover it.' }
   };
 
   var data = { decks: [], synonyms: [], settings: { fuzzy: true, meaning: true, mode: 'type' } };
@@ -756,8 +757,12 @@
     T.mode = data.settings.mode;
     stopTimer();
 
-    skipUntypable();
-    if (T.i < T.tokens.length) T.state[T.i] = 'current';
+    if (T.mode === 'read') {
+      T.i = T.tokens.length;            // nothing is being typed
+    } else {
+      skipUntypable();
+      if (T.i < T.tokens.length) T.state[T.i] = 'current';
+    }
     T.tokens.forEach(function (_, i) { renderWord(i); });
     syncTicks();
     updateScope();
@@ -772,7 +777,7 @@
     updateToolbar();
     updateStats();
 
-    if (!T.total) {
+    if (!T.total && T.mode !== 'read') {
       T.running = false;
       $('#results').classList.add('plain');
       $('#results-verdict').textContent = 'Nothing left to type';
@@ -805,6 +810,22 @@
     var hidden = T.open[i] ? 'ch show' : 'ch blank';
     host.className = 'word ' + state + (T.marked[i] ? ' peeked' : '');
     host.innerHTML = '';
+
+    // read only: first letter and punctuation stay, the rest are blanks
+    if (T.mode === 'read') {
+      var shown = T.open[i] || state === 'known';
+      var seenLetter = false;
+      Array.from(tok.display).forEach(function (ch) {
+        if (!/[a-z0-9]/i.test(ch)) { host.appendChild(el('span', 'ch ok', ch)); return; }
+        if (!seenLetter) {
+          seenLetter = true;
+          host.appendChild(el('span', 'ch ok lead', ch));
+        } else {
+          host.appendChild(el('span', shown ? 'ch show' : 'ch blank', ch));
+        }
+      });
+      return;
+    }
 
     if (state !== 'pending' && state !== 'current') {
       if (T.mode === 'first') {
@@ -855,6 +876,7 @@
   }
 
   function typeChar(ch) {
+    if (T.mode === 'read') return;
     if (T.locked || !T.running || T.i >= T.tokens.length) return;
 
     // multiple choice: 1-4 pick an option, nothing else types
@@ -1071,16 +1093,25 @@
   /* ---- studying and peeking ---- */
 
   function setStudy(on) {
-    T.studying = !!on && !T.started;
+    T.studying = !!on && (!T.started || T.mode === 'read');
     $('#text').classList.toggle('hide', !T.studying);
     updateToolbar();
   }
 
   // peek at one word: it stays highlighted so you can see what needs work
   function peekWord(i) {
-    if (T.locked || !T.running) return;
     var tok = T.tokens[i];
     if (!tok || !tok.core || T.known[tok.sent]) return;
+
+    // read only: uncovering is free, and the word stays highlighted as one to work on
+    if (T.mode === 'read') {
+      if (T.open[i]) { delete T.open[i]; delete T.marked[i]; }
+      else { T.open[i] = true; T.marked[i] = true; }
+      renderWord(i);
+      return;
+    }
+
+    if (T.locked || !T.running) return;
 
     // already on the page: marking it for attention is free
     if (T.state[i] !== 'pending' && T.state[i] !== 'current') {
@@ -1220,10 +1251,17 @@
     $('#opt-fuzzy').closest('label').hidden = mode !== 'type';
     $('#opt-meaning').closest('label').hidden = mode !== 'type';
 
+    var reading = mode === 'read';
+    document.querySelector('.stats').hidden = reading;
+    document.querySelector('.bar').hidden = reading;
+    $('#legend').hidden = reading;
+    $('#btn-peek').hidden = reading;
+    $('#btn-restart').textContent = reading ? 'Cover all up' : 'Restart (Esc)';
+
     var study = $('#btn-study');
     study.textContent = T.studying ? 'Hide text' : 'Study text';
-    study.disabled = T.started || !T.running;
-    study.title = T.started
+    study.disabled = !reading && (T.started || !T.running);
+    study.title = T.started && !reading
       ? 'Locked once you start typing. Restart if you need to study again.'
       : 'Read the whole text before you start';
 
@@ -1328,7 +1366,7 @@
   };
 
   $('#btn-study').onclick = function () {
-    if (T.started) {
+    if (T.started && T.mode !== 'read') {
       toast('No full reveals once you have started. Restart if you need to study again.');
       return;
     }
