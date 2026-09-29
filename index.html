@@ -112,6 +112,11 @@
   </div>
   <div class="bar"><div id="bar-fill"></div></div>
 
+  <div class="scope">
+    <span id="scope-note"></span>
+    <button id="btn-untick" class="btn ghost small" type="button" hidden>Untick all</button>
+  </div>
+
   <div id="text" class="text hide"></div>
   <input id="capture" type="text" autocomplete="off" autocorrect="off" autocapitalize="off"
          spellcheck="false" aria-hidden="true" tabindex="-1">
@@ -123,6 +128,7 @@
     <span class="key fixed">word</span> spelling fixed
     <span class="key para">word</span> your synonym, real word shown
     <span class="key given">word</span> filler you skipped
+    <span class="key known">word</span> sentence you ticked
     <span class="key peeked">word</span> peeked
   </p>
 
@@ -160,6 +166,10 @@
       <li><b>One peek per run.</b> Peek the word you are on, or click any word. It stays
           highlighted so you can see what needs work &mdash; and a <b>second peek sends you back
           to the beginning</b>.</li>
+      <li><b>Sentence ticks</b> &mdash; each sentence has a numbered box in front of it. Tick the
+          ones you already know and they are written in and stepped over, so you start at the first
+          sentence you have not learnt. Ticks are kept with the card, in every mode, and
+          <b>Untick all</b> brings the whole thing back.</li>
       <li><b>Esc</b> or <b>Cmd/Ctrl+R</b> restarts. Highlights survive the restart; the text does
           not.</li>
     </ul>

@@ -23,6 +23,21 @@ choice is remembered.
 
 The peek rules below apply in all three.
 
+## Starting where you left off: sentence ticks
+
+Each card is split into sentences, and every sentence has a numbered tick box in front of it.
+
+- **Tick a sentence you already know.** It is written in on the page in grey and stepped over,
+  so typing starts at the first sentence you have *not* ticked — no more retyping the opening
+  two sentences to get at the third.
+- Ticks can be anywhere: tick sentence 2 and you will type 1 and 3, with the cursor jumping over
+  the middle one.
+- The word count, progress bar and score only cover the sentences you are actually typing.
+- **Ticks are kept with the card**, so they survive restarts, mode switches and closing the
+  browser. **Untick all** puts the whole paragraph back, and editing a card's text clears its
+  ticks (the sentences have changed).
+- They work the same in all three modes.
+
 ## The rules that make it work
 
 Recall only sticks if forgetting costs you something, so the crutches are deliberately tight:

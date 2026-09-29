@@ -303,7 +303,11 @@
 
     if (editingCardId) {
       var card = deck.cards.filter(function (c) { return c.id === editingCardId; })[0];
-      if (card) { card.title = title; card.text = text; }
+      if (card) {
+        if (card.text !== text) { delete card.known; delete deck.knownAll; }
+        card.title = title;
+        card.text = text;
+      }
       toast('Saved "' + title + '"');
     } else {
       deck.cards.push({ id: uid(), title: title, text: text });
@@ -352,7 +356,10 @@
     deckId: null,
     cardIndex: null,
     mode: 'type',
-    choices: []    // the options on offer in multiple choice
+    choices: [],   // the options on offer in multiple choice
+    sentences: [],
+    known: {},     // sentences you have ticked off as learnt
+    tickEls: []
   };
 
   function normalize(s) {
@@ -369,6 +376,27 @@
   // what actually has to be typed: letters and digits only, lower case
   function coreOf(word) {
     return word.toLowerCase().replace(/[^a-z0-9]/g, '');
+  }
+
+  var ABBREV = { mr: 1, mrs: 1, ms: 1, dr: 1, prof: 1, st: 1, eg: 1, ie: 1, etc: 1, vs: 1,
+                 fig: 1, jr: 1, sr: 1, no: 1 };
+
+  function endsSentence(tok) {
+    if (!/[.!?]["')\]]*$/.test(tok.display)) return false;
+    return !ABBREV[tok.core];
+  }
+
+  // group the words into sentences so each one can be ticked off
+  function sentencesOf(tokens) {
+    var sents = [], cur = null;
+    tokens.forEach(function (tok, i) {
+      if (!cur) { cur = { first: i, last: i, words: 0 }; sents.push(cur); }
+      tok.sent = sents.length - 1;
+      cur.last = i;
+      if (tok.core) cur.words++;
+      if (endsSentence(tok)) cur = null;
+    });
+    return sents;
   }
 
   function tokenize(text) {
@@ -548,7 +576,9 @@
   }
 
   function nextTypable(from) {
-    for (var i = from; i < T.tokens.length; i++) if (T.tokens[i].core) return i;
+    for (var i = from; i < T.tokens.length; i++) {
+      if (T.tokens[i].core && !T.known[T.tokens[i].sent]) return i;
+    }
     return -1;
   }
 
@@ -577,6 +607,67 @@
     return null;
   }
 
+  /* ---- sentences you have already learnt ---- */
+
+  function knownStore() {
+    var deck = deckById(T.deckId);
+    if (!deck) return null;
+    return T.cardIndex == null ? deck : deck.cards[T.cardIndex];
+  }
+
+  function knownKey() {
+    return T.cardIndex == null ? 'knownAll' : 'known';
+  }
+
+  function loadKnown() {
+    var store = knownStore();
+    var known = {};
+    ((store && store[knownKey()]) || []).forEach(function (n) {
+      if (n >= 0 && n < T.sentences.length) known[n] = true;
+    });
+    return known;
+  }
+
+  function saveKnown() {
+    var store = knownStore();
+    if (!store) return;
+    var list = Object.keys(T.known).map(Number).sort(function (a, b) { return a - b; });
+    if (list.length) store[knownKey()] = list; else delete store[knownKey()];
+    save();
+  }
+
+  function toggleSentence(n, on) {
+    if (on) T.known[n] = true; else delete T.known[n];
+    saveKnown();
+    reset();
+    focusCapture();
+    toast(on ? 'Sentence ' + (n + 1) + ' ticked as learnt.'
+             : 'Sentence ' + (n + 1) + ' is back in the run.');
+  }
+
+  function syncTicks() {
+    T.tickEls.forEach(function (label, n) {
+      if (!label) return;
+      var box = label.firstChild;
+      box.checked = !!T.known[n];
+      label.classList.toggle('on', !!T.known[n]);
+    });
+  }
+
+  function updateScope() {
+    var ticked = Object.keys(T.known).length;
+    var first = -1;
+    for (var n = 0; n < T.sentences.length; n++) if (!T.known[n]) { first = n; break; }
+
+    $('#btn-untick').hidden = ticked === 0;
+    $('#scope-note').textContent = !T.sentences.length ? ''
+      : ticked === 0
+        ? plural(T.sentences.length, 'sentence', 'sentences') + ' \u00B7 tick one once you know it'
+        : first < 0
+          ? 'Every sentence is ticked as learnt'
+          : ticked + ' of ' + T.sentences.length + ' ticked \u00B7 starting at sentence ' + (first + 1);
+  }
+
   /* ---- starting a run ---- */
 
   function startCard(deck, index) {
@@ -601,7 +692,8 @@
     T.cardIndex = cardIndex;
     T.marked = {};                 // a new card starts with a clean slate
     T.tokens = tokenize(rawText);
-    T.total = T.tokens.filter(function (t) { return t.core.length > 0; }).length;
+    T.sentences = sentencesOf(T.tokens);
+    T.known = loadKnown();
     $('#type-title').textContent = title;
     $('#type-sub').textContent = sub;
     buildText();
@@ -613,17 +705,39 @@
   function buildText() {
     var wrap = $('#text');
     wrap.innerHTML = '';
+    T.tickEls = [];
+    var lastSent = -1;
+
     T.els = T.tokens.map(function (tok, i) {
+      if (tok.sent !== lastSent) {
+        lastSent = tok.sent;
+        wrap.appendChild(makeTick(tok.sent));
+      }
       var span = el('span', 'word');
       span.dataset.i = i;
       wrap.appendChild(span);
       if (i < T.tokens.length - 1) wrap.appendChild(document.createTextNode(' '));
       return span;
     });
+    syncTicks();
+  }
+
+  function makeTick(n) {
+    var label = el('label', 'tick');
+    var box = document.createElement('input');
+    box.type = 'checkbox';
+    box.checked = !!T.known[n];
+    box.onchange = function () { toggleSentence(n, box.checked); };
+    label.appendChild(box);
+    label.appendChild(el('span', null, String(n + 1)));
+    label.title = 'Tick sentence ' + (n + 1) + ' once you know it: it is written in and stepped over';
+    T.tickEls[n] = label;
+    return label;
   }
 
   function reset() {
-    T.state = T.tokens.map(function () { return 'pending'; });
+    T.state = T.tokens.map(function (tok) { return T.known[tok.sent] ? 'known' : 'pending'; });
+    T.total = T.tokens.filter(function (t) { return t.core && !T.known[t.sent]; }).length;
     T.i = 0;
     T.buf = '';
     T.exact = 0;
@@ -645,20 +759,35 @@
     skipUntypable();
     if (T.i < T.tokens.length) T.state[T.i] = 'current';
     T.tokens.forEach(function (_, i) { renderWord(i); });
+    syncTicks();
+    updateScope();
 
     $('#results').hidden = true;
+    $('#btn-again').hidden = false;
+    $('#btn-next').hidden = true;
     $('#text').classList.add('hide');
     $('#opt-fuzzy').checked = data.settings.fuzzy;
     $('#opt-meaning').checked = meaningOn();
     buildChoices();
     updateToolbar();
     updateStats();
+
+    if (!T.total) {
+      T.running = false;
+      $('#results').classList.add('plain');
+      $('#results-verdict').textContent = 'Nothing left to type';
+      $('#results-text').textContent = 'Every sentence is ticked as learnt. Untick one to practise it.';
+      $('#btn-again').hidden = true;
+      $('#results').hidden = false;
+      updateToolbar();
+    }
   }
 
-  // punctuation-only tokens are revealed for free
+  // punctuation, and whole sentences you have ticked, are stepped over
   function skipUntypable() {
-    while (T.i < T.tokens.length && T.tokens[T.i].core === '') {
-      T.state[T.i] = 'done';
+    while (T.i < T.tokens.length &&
+           (T.tokens[T.i].core === '' || T.known[T.tokens[T.i].sent])) {
+      T.state[T.i] = T.known[T.tokens[T.i].sent] ? 'known' : 'done';
       renderWord(T.i);
       T.i++;
     }
@@ -677,7 +806,7 @@
     host.className = 'word ' + state + (T.marked[i] ? ' peeked' : '');
     host.innerHTML = '';
 
-    if (state === 'done' || state === 'fixed' || state === 'para' || state === 'given') {
+    if (state !== 'pending' && state !== 'current') {
       if (T.mode === 'first') {
         // mark the one letter you actually supplied
         var chars = Array.from(tok.display);
@@ -847,7 +976,7 @@
     // walk back over any fillers that were written in for you
     while (j > 0 && T.state[j] === 'given') { T.given--; T.state[j] = 'pending'; renderWord(j); j--; }
     while (j >= 0 && !T.tokens[j].core) j--;
-    if (j < 0) return;
+    if (j < 0 || T.known[T.tokens[j].sent]) return;   // that is where your practice starts
 
     if (T.state[j] === 'fixed') T.fixed--;
     else if (T.state[j] === 'para') T.para--;
@@ -951,7 +1080,7 @@
   function peekWord(i) {
     if (T.locked || !T.running) return;
     var tok = T.tokens[i];
-    if (!tok || !tok.core) return;
+    if (!tok || !tok.core || T.known[tok.sent]) return;
 
     // already on the page: marking it for attention is free
     if (T.state[i] !== 'pending' && T.state[i] !== 'current') {
@@ -1216,6 +1345,14 @@
     btn.onclick = function () { setMode(btn.dataset.mode); };
   });
 
+  $('#btn-untick').onclick = function () {
+    T.known = {};
+    saveKnown();
+    reset();
+    focusCapture();
+    toast('All sentences are back in the run.');
+  };
+
   $('#btn-restart').onclick = restartCard;
   $('#btn-again').onclick = restartCard;
   $('#btn-next').onclick = nextCard;
@@ -1256,7 +1393,9 @@
             id: uid(),
             name: String(d.name || 'Untitled deck'),
             cards: (d.cards || []).map(function (c) {
-              return { id: uid(), title: String(c.title || 'Untitled card'), text: String(c.text || '') };
+              var card = { id: uid(), title: String(c.title || 'Untitled card'), text: String(c.text || '') };
+              if (Array.isArray(c.known)) card.known = c.known;
+              return card;
             })
           });
         });
